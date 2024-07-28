@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+html, body { height: 100%; margin: 0; }
+p {
+  text-align: justify;
+  text-indent: 2em;
+}
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.header { height: 36px; background-color: #cccccc; }
+.content {
+  height: calc(100% - 48px); flex: 1;
+  overflow: auto; background-color: #f5f2f0;
+}
+.footer { height: 4px; background-color: #cccccc; }
+.overlay {
+  position: static; width: 100%; height: 100%;
+  background-color: #f5f2f0;
+  display: none; /* Initially hide all divs */
+}
+.overlay.active { display: block; } /* Display only the active div */
+.pdf-page { margin-bottom: 20px; }
+.markdown {
+  width: calc(min(100%, 141.4vh));
+  margin-left: calc((100% - min(100%, 141.4vh)) / 2);
+}
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" integrity="sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" integrity="sha512-cbQXwDFK7lj2Fqfkuxbo5iD1dSbLlJGXGpfTDqbggqjHJeyzx88I3rfwjS38WJag/ihH7lzuGlGHpDBymLirZQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" integrity="sha512-fHwaWebuwA7NSF5Qg/af4UeDx9XqUpYpOGgubo3yWu+b2IQR4UeQwbb42Ti7gVAjNtVoI/I9TEoYeu9omwcC6g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/styles/github.min.css" integrity="sha512-0aPQyyeZrWj9sCA46UlmWgKOP0mUipLQ6OZXu8l4IcAmD2u31EPEy9VcIMvl7SoAaKe8bLXZhYoMaE/in+gcgA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.css" integrity="sha512-za6IYQz7tR0pzniM/EAkgjV1gf1kWMlVJHBHavKIvsNoUMKWU99ZHzvL6lIobjiE2yKDAKMDSSmcMAxoiWgoWA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.css" integrity="sha512-42kB9yDlYiCEfx2xVwq0q7hT4uf26FUgSIZBK8uiaEnTdShXjwr8Ip1V4xGJMg3mHkUt9nNuTDxunHF0/EgxLQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" integrity="sha512-9khQRAUBYEJDCDVP2yw3LRUQvjJ0Pjx0EShmaQjcHa6AXiOv6qHQu9lCAIR8O+/D8FtaCoJ2c0Tf9Xo7hYH01Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" integrity="sha512-SkmBfuA2hqjzEVpmnMt/LINrjop3GKWqsuLSSB3e7iBmYK7JuWw4ldmmxwD9mdm2IRTTi0OxSAfEGvgEi0i2Kw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js" integrity="sha512-BttltKXFyWnGZQcRWj6osIg7lbizJchuAMotOkdLxHxwt/Hyo+cl47bZU0QADg+Qt5DJwni3SbYGXeGMB5cBcw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js" integrity="sha512-Qlv6VSKh1gDKGoJbnyA5RMXYcvnpIqhO++MhIM2fStMcGT9i2T//tSwYFlcyoRRDcDZ+TYHpH8azBBCyhpSeqw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/13.0.2/lib/marked.umd.js" integrity="sha512-mD2LOoVwfxFb23N1xdhhZ7eu/12/rUCdzH7KhgVL6Lgki/zU8sn5tTEhXhsKIx1cwhCpwQb6zSJ6pLNKoH+8eA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked-highlight/2.1.3/index.umd.min.js" integrity="sha512-YHfFtx3BUUQ3Wk+kbZoqPDIxrgW0axUMM1KjVhsaeiQV36WJP1QP7np+tqTPIOU+6ev5BTGWR2IwcMjcPGuD+w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/photoswipe/5.4.4/umd/photoswipe.umd.min.js" integrity="sha512-BXwwGU7zCXVgpT2jpXnTbioT9q1Byf7NEXVxovTZPlNvelL2I/4LjOaoiB2a19L+g5za8RbkoJFH4fMPQcjFFw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js" integrity="sha512-LQNxIMR5rXv7o+b1l8+N1EZMfhG7iFZ9HhnbJkTp4zjNr5Wvst75AqUeFDxeRUa7l5vEDyUiAip//r+EFLLCyA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js" integrity="sha512-iWiuBS5nt6r60fCz26Nd0Zqe0nbk1ZTIQbl3Kv7kYsX+yKMUFHzjaH2+AnM6vp2Xs+gNmaBAVWJjSmuPw76Efg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js" integrity="sha512-jB0TkTBeQC9ZSkBqDhdmfTv1qdfbWpGE72yJ/01Srq6hEzZIz2xkz1e57p9ai7IeHMwEG7HpzG6NdptChif5Pg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/highlight.min.js" integrity="sha512-6yoqbrcLAHDWAdQmiRlHG4+m0g/CT/V9AGyxabG8j7Jk8j3r3K6due7oqpiRMZqcYe9WM2gPcaNNxnl2ux+3tA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/languages/sml.min.js" integrity="sha512-oGjCSnCBvG9fVK9u1HaKZexOmghnXy7miBHlYjfsWORaIjd/0YX72KIMgwOI0YJwv9jtKWxgRmT6TPub6pqLwA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/languages/plaintext.min.js" integrity="sha512-4M3owu9jZKjWlG/ixW1LYkSoDMdSGpP/UyOXDzi2fjgRBgvnMG4DDX1/+4VYy9IOGfMiXsfqf6ET6wupxdbuJQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/languages/dts.min.js" integrity="sha512-Q0+TIzde2nJmJnkIpbw3umX4umlBez1hOI9UR/9Nn8Cr0w+uqRpiZcLOg4L8dcAMG1K6AHYmrAfimMnhUPVnqQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/languages/shell.min.js" integrity="sha512-T0o0a78mHd7wa+w6BwrmNj6ATKqM4RWKIbOTG4XXQdgzd/U+uqr2Ghblj35OJc3PgEIF+NFKrKPcWUxJQfZ/aA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.js" integrity="sha512-EC3CQ+2OkM+ZKsM1dbFAB6OGEPKRxi6EDRnZW9ys8LghQRAq6cXPUgXCCujmDrXdodGXX9bqaaCRtwj4h4wgSQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.7.2/axios.min.js" integrity="sha512-JSCFHhKDilTRRXe9ak/FJ28dcpOJxzQaCd3Xg8MyF6XFjODhy/YMCM8HW0TFDckNHWUewW+kfvhin43hKtJxAw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.js" integrity="sha512-bUg5gaqBVaXIJNuebamJ6uex//mjxPk8kljQTdM1SwkNrQD7pjS+PerntUSD+QRWPNJ0tq54/x4zRV8bLrLhZg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<div class="container">
+<div class="header">
+  <button style="width: 150px; height: 100%; font-size: 120%;" onclick="download();">Download ZIP</button>
+  <select style="height: 100%; font-size: 120%;" id="files" onchange="filesChange();"> </select>
+</div>
+<div class="content">
+  <div id="code" class="overlay active">
+    <pre id="code-pre" style="margin: 0;"><code id="dynamic-code"></code></pre>
+  </div>
+  <div id="markdown" class="overlay markdown"></div>
+  <div id="div-image" class="overlay">
+    <img id="image" style="visibility: hidden;">
+  </div>
+  <div id="invalid" class="overlay">
+    <p>This file can't be previewed online. Please download ZIP file.</p>
+  </div>
+  <div id="pdf-container" class="overlay">
+    <iframe id="pdf" style="width: 100%; height: 100%;"></iframe>
+  </div>
+</div>
+<div class="footer"></div>
+<script>
+let keyiv;
+let fileTable;
+let fileContents = new Map();
+let password = getQueryParam('p');
+let param_q = getQueryParam('q');
+let loadedSize = 0.0;
+let totalSize = 0.0;
+const CHUNK_SIZE = 1000 * 1024;
+let previousPDFFileName;
+
+const { markedHighlight } = globalThis.markedHighlight;
+const newMarked = new marked.Marked(
+  markedHighlight({
+    langPrefix: 'hljs language-',
+    highlight(code, lang, info) {
+      const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+      return hljs.highlight(code, { language }).value;
+    }
+  })
+);
+
+async function getKeyMaterial(password) {
+  const encoder = new TextEncoder();
+  return window.crypto.subtle.importKey(
+    "raw",
+    encoder.encode(password),
+    { name: "PBKDF2" },
+    false,
+    ["deriveBits", "deriveKey"]
+  );
+}
+
+async function getKey(keyMaterial, salt) {
+  const tmpkeyiv = new Uint8Array(
+    await window.crypto.subtle.deriveBits(
+      { name: "PBKDF2", salt: salt,
+        iterations: 1000, hash: "SHA-256" },
+      keyMaterial, 384
+    ));
+  const key = await window.crypto.subtle.importKey(
+    "raw",
+    tmpkeyiv.slice(0, 32),
+    { name: "AES-CBC" },
+    true,
+    ["encrypt", "decrypt"]
+  );
+  const iv = tmpkeyiv.slice(32, 48);
+  return [key, iv];
+}
+
+async function decryptFile(encryptedArrayBuffer) {
+  const header = new Uint8Array(encryptedArrayBuffer.slice(0, 8));
+  const expectedHeader = new TextEncoder().encode('Salted__');
+  if (!header.every((value, index) => value === expectedHeader[index])) {
+    throw new Error('Invalid file header');
+  }
+  const salt = new Uint8Array(encryptedArrayBuffer.slice(8, 16));
+  const ciphertext = new Uint8Array(encryptedArrayBuffer.slice(16));
+  const keyMaterial = await getKeyMaterial(password);
+  keyiv = await getKey(keyMaterial, salt);
+  const decrypted = await window.crypto.subtle.decrypt(
+    { name: "AES-CBC", iv: keyiv[1] },
+    keyiv[0], ciphertext
+  );
+  return decrypted;
+}
+
+function getQueryParam(param) {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get(param);
+}
+
+function showCode(type, lineno, text) {
+  const preElement = document.getElementById('code-pre');
+  const codeElement = document.getElementById('dynamic-code');
+  delete codeElement.dataset.highlighted;
+  if (lineno) {
+    preElement.classList = [];
+    codeElement.classList = [type + " line-numbers"];
+  } else {
+    preElement.classList = [];
+    codeElement.classList = [type];
+  }
+  codeElement.textContent = text;
+  if (type.startsWith("hljs")) {
+    hljs.highlightElement(codeElement);
+  } else {
+    Prism.highlightElement(codeElement);
+  }
+}
+
+async function selectFile(fileName) {
+  const file = fileContents.get(fileName);
+  if (file.type === "cpp") {
+    showDiv("code");
+    const decoder = new TextDecoder();
+    showCode("language-cpp", true, decoder.decode(file.content));
+  } else if (file.type === "dts") {
+    showDiv("code");
+    const decoder = new TextDecoder();
+    showCode("hljs language-dts", false, decoder.decode(file.content));
+  } else if (file.type === "markdown") {
+    showDiv("markdown");
+    const decoder = new TextDecoder();
+    const mdElement = document.getElementById("markdown");
+    mdElement.innerHTML = DOMPurify.sanitize(newMarked.parse(decoder.decode(file.content)));
+    const codes = document.querySelectorAll('code');
+    for (code of codes) {
+      if (code.classList.length === 0) {
+        code.classList = ["hljs language-plaintext"];
+        hljs.highlightElement(code);
+      }
+    }
+    renderMathInElement(mdElement, {
+      delimiters: [
+        { left: "$$", right: "$$", display: false },
+        { left: "\\[", right: "\\]", display: true },
+        { left: "$",  right: "$",  display: false },
+        { left: "\\(", right: "\\)", display: false }
+      ]
+    });
+  } else if (file.type === "png") {
+    showDiv("div-image");
+    const image = document.getElementById("image");
+    const blob = new Blob([file.content], { type: 'image/png' });
+    const imageURL = URL.createObjectURL(blob);
+    image.src = imageURL;
+    const viewer = new Viewer(image, { inline: true });
+  } else if (file.type === "pdf") {
+    showDiv("pdf-container");
+    if (fileName !== previousPDFFileName) {
+      const blob = new Blob([file.content], { type: 'application/pdf' });
+      const pdfURL = URL.createObjectURL(blob);
+      document.getElementById('pdf').src = pdfURL;
+      previousPDFFileName = fileName;
+    }
+  } else {
+    showDiv("invalid");
+  }
+}
+
+async function filesChange() {
+  const filesElement = document.getElementById('files');
+  await selectFile(filesElement.value);
+}
+
+async function download() {
+  const zip = new JSZip();
+  for (let [name, file] of fileContents) {
+    zip.file(name, file.content);
+  }
+  const blob = await zip.generateAsync({ type: 'blob' });
+  saveAs(blob, "riscv-emu.zip");
+}
+
+function addFile(fileType, fileName, content) {
+  const filesElement = document.getElementById('files');
+  const option = document.createElement("option");
+  option.text = fileName;
+  option.value = fileName;
+  filesElement.add(option);
+  fileContents.set(fileName, { type: fileType, content: content });
+}
+
+async function getFileSize(url) {
+  const response = await axios.head(url);
+  return parseInt(response.headers['content-length'], 10);
+}
+
+async function downloadChunk(url, start, end, progress) {
+  const response = await axios.get(url, {
+    headers: {
+      Range: `bytes=${start}-${end}`,
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache', 'Expires': 0
+    },
+    responseType: 'arraybuffer',
+    cache: 'no-store',
+    onDownloadProgress: progressEvent => {
+      if (!progress) return;
+      const percentCompleted = Math.min(
+        (loadedSize + progressEvent.loaded) / totalSize, 1.0
+      );
+      NProgress.set(percentCompleted);
+    }
+  });
+  loadedSize += (end - start + 1);
+  return response.data;
+}
+
+async function downloadFileToUint8Array(url, progress) {
+  const fileSize = await getFileSize(url);
+  const fileBuffer = new Uint8Array(fileSize);
+  for (let start = 0; start < fileSize; start += CHUNK_SIZE) {
+    const end = Math.min(start + CHUNK_SIZE - 1, fileSize - 1);
+    const chunk = await downloadChunk(url, start, end, progress);
+    fileBuffer.set(new Uint8Array(chunk), start);
+  }
+  return fileBuffer;
+}
+
+function processEncryptedFile(fileName, progress, func) {
+  return downloadFileToUint8Array(fileName, progress)
+    .then(data => decryptFile(data))
+    .then(func);
+}
+
+function showDiv(id) {
+  var divs = document.querySelectorAll('.overlay');
+  divs.forEach(function(div) {
+    div.classList.remove('active');
+  });
+  document.getElementById(id).classList.add('active');
+}
+
+async function loadFiles(files) {
+  for (let file of files) {
+    totalSize += await getFileSize(file.enc);
+  }
+  for (let file of files) {
+    await processEncryptedFile(
+      file.enc, true,
+      data => addFile(file.type, file.src, data)
+    );
+  }
+  await selectFile(files[0].src);
+  NProgress.done();
+}
+
+async function loadFileTable() {
+  return processEncryptedFile(param_q + "/1.bin", false, data => {
+    const decoder = new TextDecoder();
+    return fileTable = JSON.parse(decoder.decode(data));
+  });
+}
+
+async function initialize() {
+  fileTable = await loadFileTable();
+  if (fileTable === undefined) throw "Error!";
+  loadFiles(fileTable);
+  await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.5.136/pdf.mjs');
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.5.136/pdf.worker.min.mjs';
+}
+
+NProgress.configure({ trickle: false });
+NProgress.start();
+initialize().catch(console.log);
+</script>
+</body>
+</html>
+
