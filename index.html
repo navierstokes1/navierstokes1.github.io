@@ -42,6 +42,11 @@ p {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" integrity="sha512-9khQRAUBYEJDCDVP2yw3LRUQvjJ0Pjx0EShmaQjcHa6AXiOv6qHQu9lCAIR8O+/D8FtaCoJ2c0Tf9Xo7hYH01Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js" integrity="sha512-SkmBfuA2hqjzEVpmnMt/LINrjop3GKWqsuLSSB3e7iBmYK7JuWw4ldmmxwD9mdm2IRTTi0OxSAfEGvgEi0i2Kw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js" integrity="sha512-BttltKXFyWnGZQcRWj6osIg7lbizJchuAMotOkdLxHxwt/Hyo+cl47bZU0QADg+Qt5DJwni3SbYGXeGMB5cBcw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-makefile.min.js" integrity="sha512-9MXjDxOwWNLJZRSwZRFdc1lvSIxld5c9DeLhySKjTAIEpj8a48Kezdc/hKjUsyD8S+oa3a+5SpuqdcCFodSI3Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-nasm.min.js" integrity="sha512-WLcCgsIheTle+9+48wuKvCUL/JG6VlUGti8iSxFx66ZY5Jzn6c0qODd3Ng9yUHDlDnIcGXd52/aWc3/WhY15yQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-toml.min.js" integrity="sha512-R9JG7uVdcjWlZvEWyP3KfxtexvT1uIlKUF/dYVmZRbvJyMobK6zGCpIM2gLVqYjLSYeL/zBjOVpP7vXxVtzfCw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-rust.min.js" integrity="sha512-R/HpMlNfZZV6DxMhNz1dYJbBaPBVSOCqX8imo3uGUurhPDHRcXrBxkEVOjawwUwTMfOqT6t1eLYYQXIjFWCX/A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-linker-script.min.js" integrity="sha512-4t3s1UTOGPxygdL4zyzGYDffAteWIL3hgKaXy4wQEGQQz7FdDDellgBcN6a3d7n6LEq9c1EOEkcpy5W5cjDLvg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js" integrity="sha512-Qlv6VSKh1gDKGoJbnyA5RMXYcvnpIqhO++MhIM2fStMcGT9i2T//tSwYFlcyoRRDcDZ+TYHpH8azBBCyhpSeqw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/13.0.2/lib/marked.umd.js" integrity="sha512-mD2LOoVwfxFb23N1xdhhZ7eu/12/rUCdzH7KhgVL6Lgki/zU8sn5tTEhXhsKIx1cwhCpwQb6zSJ6pLNKoH+8eA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -173,10 +178,10 @@ function showCode(type, lineno, text) {
 
 async function selectFile(fileName) {
   const file = fileContents.get(fileName);
-  if (file.type === "cpp") {
+  if (["cpp", "toml", "rust", "makefile", "nasm", "linker-script"].includes(file.type)) {
     showDiv("code");
     const decoder = new TextDecoder();
-    showCode("language-cpp", true, decoder.decode(file.content));
+    showCode("language-" + file.type, true, decoder.decode(file.content));
   } else if (file.type === "dts") {
     showDiv("code");
     const decoder = new TextDecoder();
@@ -295,8 +300,25 @@ function showDiv(id) {
   document.getElementById(id).classList.add('active');
 }
 
+function simpleHash(str) {
+  let hash = 16031139015057093624n;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash * 5732100172357374353n + BigInt(str.charCodeAt(i))) % (1n << 64n);
+  }
+
+  // Convert the 64-bit hash to a byte array
+  const byteArray = [];
+  for (let i = 7; i >= 0; i--) {
+    byteArray[i] = Number((hash >> BigInt(i * 8)) & 0xFFn);
+  }
+  // Convert byte array to Base64 string
+  const base64Hash = btoa(String.fromCharCode(...byteArray));
+  return base64Hash.replace(/\//g, "-").replace(/\+/g, "_").slice(0, -1);
+}
+
 async function loadFiles(files) {
   for (let file of files) {
+    if (!('enc' in file)) { file.enc = param_q + '/' + simpleHash(file.src) + ".bin"; }
     totalSize += await getFileSize(file.enc);
   }
   for (let file of files) {
@@ -310,7 +332,7 @@ async function loadFiles(files) {
 }
 
 async function loadFileTable() {
-  return processEncryptedFile(param_q + "/1.bin", false, data => {
+  return processEncryptedFile(param_q + "/kyN6at3y7Sw.bin", false, data => {
     const decoder = new TextDecoder();
     return fileTable = JSON.parse(decoder.decode(data));
   });
